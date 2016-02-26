@@ -19,6 +19,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +30,8 @@ import ch.qos.logback.classic.Level;
 //import com.sun.org.apache.xml.internal.resolver.helpers.FileURL;
 
 /**
- * Parses Wikipedia dump to html format
+ * Parses Wikipedia dump to html format by printing
+ * to STDOUT in CSV format
  * 
  * @author cheng88
  *
@@ -37,19 +39,14 @@ import ch.qos.logback.classic.Level;
 public class DumpParser implements IArticleFilter {
 
   private static boolean debug = false;
-  private int counter = 0;
-  private long start;
+  private int totalParsed = 0;
+  private int prevCount = 0;
+  private long prevTime;
   private final ThreadPoolExecutor parsing;
   private boolean printProgress = true;
-//  private LinkedBlockingQueue<Connection> createdConnections = new LinkedBlockingQueue<>();
-//  private ThreadLocal<Connection> connections = ThreadLocal.withInitial(() -> {
-//    Connection c = Index.connect();
-//    createdConnections.add(c);
-//    return c;
-//  });
   
   // More threads than this would not help
-  private static final int MAX_THREADS = 10;
+  private static final int MAX_THREADS = 40;
 
   /**
    * Multi-threaded parsing with single dump I/O
@@ -73,17 +70,12 @@ public class DumpParser implements IArticleFilter {
     return this;
   }
 
-  private void printATable(String html) {
-    if (html.contains("<table>"))
-      System.out.println(StringUtils.substringBetween(html, "<table>", "</table>"));
-  }
-
   /**
    * @override
    */
   public void process(final WikiArticle page, Siteinfo siteinfo) {
-    if (printProgress && counter == 0) {
-      start = System.currentTimeMillis();
+    if (printProgress && totalParsed == 0) {
+      prevTime = System.currentTimeMillis();
     }
     boolean isContentPage = page.isMain() || page.isCategory(); 
     if (isContentPage && !StringUtils.isEmpty(page.getText()))
@@ -94,11 +86,10 @@ public class DumpParser implements IArticleFilter {
         String mediawiki = page.getText();
         try {
           String html = model.render(mediawiki);
-//          Index.store(connections.get(), id, title, html, mediawiki);
           String output = Arrays.asList(id, title, html, mediawiki)
               .stream()
-              .map(s->StringUtils.remove(s, '\t'))
-              .collect(Collectors.joining("\t"));
+              .map(StringEscapeUtils::escapeCsv)
+              .collect(Collectors.joining(","));
           synchronized (parsing) {
             System.out.println(output);
           }
@@ -107,10 +98,12 @@ public class DumpParser implements IArticleFilter {
         }
       });
 
-    if (printProgress && ++counter % 500 == 0) {
-      double timeLapsed = (System.currentTimeMillis() - start) / 1000.;
-      double articlesPerSecond = counter / timeLapsed;
-      System.err.printf("%d articles at %.2f/sec\n", counter, articlesPerSecond);
+    if (printProgress && ++totalParsed % 500 == 0) {
+      double timeLapsed = (System.currentTimeMillis() - prevTime) / 1000.;
+      prevTime = System.currentTimeMillis();
+      double pagesPerSecond = (totalParsed - prevCount) / timeLapsed;
+      prevCount = totalParsed;
+      System.err.printf("%d pages at %.2f/sec\n", totalParsed, pagesPerSecond);
       System.err.printf("Active threads %d/%d\n", parsing.getActiveCount(),
           parsing.getPoolSize());
     }
@@ -126,16 +119,6 @@ public class DumpParser implements IArticleFilter {
     } catch (InterruptedException e) {
       e.printStackTrace();
     }
-    // Closes created DB connections
-//    for(Connection c: createdConnections){
-//      if (c!=null){
-//        try {
-//          c.close();
-//        } catch (SQLException e) {
-//          e.printStackTrace();
-//        }
-//      }
-//    }
   }
 
   /**
@@ -193,6 +176,13 @@ public class DumpParser implements IArticleFilter {
     executor.allowCoreThreadTimeOut(true);
     return executor;
   }
+  
+  private static void turnOffLogback(){
+    Logger rootLogger = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
+    if (rootLogger instanceof ch.qos.logback.classic.Logger) {
+      ((ch.qos.logback.classic.Logger) rootLogger).setLevel(Level.OFF);
+    }
+  }
 
   /**
    * Prints simple information while parsing the dump
@@ -208,11 +198,8 @@ public class DumpParser implements IArticleFilter {
     }
 
     // Turn off logging since it only reports when chart/diagram templates
-    // can't be drawn in bliki
-    Logger rootLogger = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
-    if (rootLogger instanceof ch.qos.logback.classic.Logger) {
-      ((ch.qos.logback.classic.Logger) rootLogger).setLevel(Level.OFF);
-    }
+    // can't be drawn in bliki and messes with stdout pipe
+    turnOffLogback();
 
     try {
       System.err.println("Started dump parsing");
@@ -225,7 +212,7 @@ public class DumpParser implements IArticleFilter {
       } else {
         parseDumpWith(parser);
       }
-      System.err.printf("\nParsing done! Totalling %d articles.\n", parser.counter);
+      System.err.printf("\nParsing done! Totalling %d articles.\n", parser.totalParsed);
     } catch (Exception e) {
       e.printStackTrace();
     }
