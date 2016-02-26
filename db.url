@@ -1,1 +1,1 @@
-postgresql://localhost/entitylinking
+postgresql://localhost:$PGPORT/entitylinking

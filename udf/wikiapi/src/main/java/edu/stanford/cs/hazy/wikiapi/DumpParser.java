@@ -12,15 +12,11 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.lang3.StringUtils;
@@ -45,12 +41,12 @@ public class DumpParser implements IArticleFilter {
   private long start;
   private final ThreadPoolExecutor parsing;
   private boolean printProgress = true;
-  private LinkedBlockingQueue<Connection> createdConnections = new LinkedBlockingQueue<>();
-  private ThreadLocal<Connection> connections = ThreadLocal.withInitial(() -> {
-    Connection c = Index.connect();
-    createdConnections.add(c);
-    return c;
-  });
+//  private LinkedBlockingQueue<Connection> createdConnections = new LinkedBlockingQueue<>();
+//  private ThreadLocal<Connection> connections = ThreadLocal.withInitial(() -> {
+//    Connection c = Index.connect();
+//    createdConnections.add(c);
+//    return c;
+//  });
   
   // More threads than this would not help
   private static final int MAX_THREADS = 10;
@@ -131,15 +127,15 @@ public class DumpParser implements IArticleFilter {
       e.printStackTrace();
     }
     // Closes created DB connections
-    for(Connection c: createdConnections){
-      if (c!=null){
-        try {
-          c.close();
-        } catch (SQLException e) {
-          e.printStackTrace();
-        }
-      }
-    }
+//    for(Connection c: createdConnections){
+//      if (c!=null){
+//        try {
+//          c.close();
+//        } catch (SQLException e) {
+//          e.printStackTrace();
+//        }
+//      }
+//    }
   }
 
   /**
@@ -219,7 +215,7 @@ public class DumpParser implements IArticleFilter {
     }
 
     try {
-      System.out.println("Started dump parsing");
+      System.err.println("Started dump parsing");
       DumpParser parser = new DumpParser();
       if (debug) {
         BZip2CompressorInputStream bi = new BZip2CompressorInputStream(
@@ -229,7 +225,7 @@ public class DumpParser implements IArticleFilter {
       } else {
         parseDumpWith(parser);
       }
-      System.out.printf("\nParsing done! Totalling %d articles.\n", parser.counter);
+      System.err.printf("\nParsing done! Totalling %d articles.\n", parser.counter);
     } catch (Exception e) {
       e.printStackTrace();
     }
