@@ -14,6 +14,7 @@ import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -47,6 +48,8 @@ public class DumpParser implements IArticleFilter {
 //    createdConnections.add(c);
 //    return c;
 //  });
+  
+//  private LinkedBlockingDeque<String> outputs = new LinkedBlockingDeque<>(1000000);
   
   // More threads than this would not help
   private static final int MAX_THREADS = 10;
@@ -113,6 +116,7 @@ public class DumpParser implements IArticleFilter {
       System.err.printf("%d articles at %.2f/sec\n", counter, articlesPerSecond);
       System.err.printf("Active threads %d/%d\n", parsing.getActiveCount(),
           parsing.getPoolSize());
+      System.err.printf("Waiting for write queue size %d", outputs.size());
     }
   }
 
