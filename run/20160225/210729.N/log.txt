@@ -1,0 +1,8 @@
+21:07:31.079 [][][Slf4jLogger] INFO  Slf4jLogger started
+21:07:31.090 [main][EventStream(akka://deepdive)][EventStream] DEBUG logger log1-Slf4jLogger started
+21:07:31.092 [main][EventStream(akka://deepdive)][EventStream] DEBUG Default Loggers started
+21:07:31.094 [main][Main$(akka://deepdive)][Main$] INFO  Running pipeline with configuration from /Users/xiaocheng/el/run/20160225/210729.N/deepdive.conf
+21:07:31.124 [main][SettingsParser$(akka://deepdive)][SettingsParser$] INFO  Database settings: user xiao, dbname entitylinking, host localhost, port 5432.
+21:07:31.154 [main][DeepDive$(akka://deepdive)][DeepDive$] ERROR endtoend: No such pipeline defined
+21:07:31.157 [main][JdbcDataStoreObject$(akka://deepdive)][JdbcDataStoreObject$] INFO  Closing all JDBC data stores
+21:07:31.173 [default-dispatcher-2][EventStream][EventStream] DEBUG shutting down: StandardOutLogger started

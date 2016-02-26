@@ -1,0 +1,12 @@
+@document
+
+wiki_pages(
+  // Wikipedia internal article id
+  id              text,
+  // article title
+  title           text,
+  // html content of the article
+  html            text,
+  // raw mediawiki markup of the page
+  mediawiki       text
+).
