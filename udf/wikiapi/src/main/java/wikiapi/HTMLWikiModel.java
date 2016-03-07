@@ -22,7 +22,7 @@ public class HTMLWikiModel extends WikiModel {
   }
   
   public static String normalizeTitle(String title){
-    return StringUtils.capitalize(title).replace('_', ' ');
+    return StringUtils.capitalize(title.trim()).replace('_', ' ');
   }
 
   @Override

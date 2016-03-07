@@ -110,10 +110,10 @@ public class CollectStats {
         }
         return v;
       });
-      for (Integer target : redirects.keySet()) {
-        if (redirects.containsKey(target)) {
-          String nonflat = ids.inverse().get(target);
-          System.out.println(nonflat);
+      for (Integer rid : redirects.values()) {
+        if (redirects.containsKey(rid)) {
+          String nonflat = titles.get(rid);
+          System.out.println("Hierarchical redirect for: "+nonflat);
         }
       }
       System.out.println(ids.size());
