@@ -6,13 +6,11 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Collections;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-
-import org.luaj.vm2.ast.Stat.Return;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
@@ -59,8 +57,8 @@ public class CollectStats {
   }
 
   private static Map<Integer, Integer> getRedirects(Connection c,
-      Map<String, Integer> ids) {
-
+      BiMap<String, Integer> ids) {
+    Map<Integer, String> titles = ids.inverse();
     String sql = "select id, "
         + "substring(mediawiki from '\\[\\[([^\\]]+)\\]\\]') "
         + "from wiki_pages where html is null and lower(mediawiki) "
@@ -84,7 +82,28 @@ public class CollectStats {
       e.printStackTrace();
     }
   } );
-    return redirects;
+    return redirects
+        .entrySet()
+        .parallelStream()
+        .filter(
+            e -> {
+              Integer v = e.getValue();
+              Integer end = null;
+              Set<Integer> loop = Sets.newHashSet(v);
+              while ((end = redirects.getOrDefault(v, null)) != null) {
+                if (loop.contains(end)) {
+                  System.err.println("Redirect loop detected:"
+                      + loop.stream().map(titles::get)
+                          .collect(Collectors.joining(",")));
+                  // Drop loops from redirects
+                  return false;
+                }
+                e.setValue(end);
+                v = end;
+                loop.add(v);
+              }
+              return true;
+            }).collect(Collectors.toMap(Entry::getKey, Entry::getValue));
   }
 
   public static void main(String[] args) {
@@ -93,27 +112,11 @@ public class CollectStats {
       BiMap<String, Integer> ids = getIds(c);
       Map<Integer, String> titles = ids.inverse();
       Map<Integer, Integer> redirects = getRedirects(c, ids);
-      // flatten redirects
-      redirects.replaceAll((k, v) -> {
-        Integer end = null;
-        Set<Integer> loop = Sets.newHashSet(v);
-        while ((end = redirects.getOrDefault(v, null)) != null) {
-          if (loop.contains(end)) {
-            System.err.println("Loop detected:"
-                + loop.stream().map(titles::get)
-                    .collect(Collectors.joining(",")));
-            // Return the smallest in the loop for consistency
-            return Collections.min(loop);
-          }
-          v = end;
-          loop.add(v);
-        }
-        return v;
-      });
+
       for (Integer rid : redirects.values()) {
         if (redirects.containsKey(rid)) {
           String nonflat = titles.get(rid);
-          System.out.println("Hierarchical redirect for: "+nonflat);
+          System.out.println("Hierarchical redirect for: " + nonflat);
         }
       }
       System.out.println(ids.size());
