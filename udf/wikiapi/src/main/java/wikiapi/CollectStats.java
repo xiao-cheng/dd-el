@@ -6,12 +6,18 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
+
+import org.luaj.vm2.ast.Stat.Return;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 /**
  * Caches frequently accessed data in hashmap and computes the relevant
@@ -37,19 +43,19 @@ public class CollectStats {
     }
   }
 
-  private static BiMap<String, Integer> getIdCache(Connection c) {
+  private static BiMap<String, Integer> getIds(Connection c) {
     String sql = "select id, title from wiki_pages";
-    final BiMap<String, Integer> cache = HashBiMap.create();
+    final BiMap<String, Integer> ids = HashBiMap.create();
     query(c, sql, rs -> {
       try {
         int id = rs.getInt(1);
         String title = normalizeTitle(rs.getString(2));
-        cache.put(title, id);
+        ids.put(title, id);
       } catch (Exception e) {
         e.printStackTrace();
       }
     });
-    return cache;
+    return ids;
   }
 
   private static Map<Integer, Integer> getRedirects(Connection c,
@@ -57,7 +63,7 @@ public class CollectStats {
 
     String sql = "select id, "
         + "substring(mediawiki from '\\[\\[([^\\]]+)\\]\\]') "
-        + "from wiki_pages where html is null and lower(mediawiki) "  
+        + "from wiki_pages where html is null and lower(mediawiki) "
         + "like '#redirect%'";
 
     Map<Integer, Integer> redirects = Maps.newHashMap();
@@ -69,31 +75,43 @@ public class CollectStats {
         if (redirectId >= 0) {
           redirects.put(id, redirectId);
         } else {
+          // Subsection links are actively ignored
+        if (!redirect.contains("#")) {
           System.err.println("[[" + redirect + "]] has no id");
         }
-      } catch (Exception e) {
-        e.printStackTrace();
       }
-    });
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  } );
     return redirects;
   }
 
   public static void main(String[] args) {
     try (Connection c = DB.getConnection()) {
       long start = System.currentTimeMillis();
-      BiMap<String, Integer> ids = getIdCache(c);
+      BiMap<String, Integer> ids = getIds(c);
+      Map<Integer, String> titles = ids.inverse();
       Map<Integer, Integer> redirects = getRedirects(c, ids);
       // flatten redirects
-      redirects.entrySet().stream().forEach(e->{
-        Integer end = e.getValue();
-        Integer deeper = null;
-        while((deeper = redirects.getOrDefault(end, null)) !=null ){
-          end = deeper;
+      redirects.replaceAll((k, v) -> {
+        Integer end = null;
+        Set<Integer> loop = Sets.newHashSet(v);
+        while ((end = redirects.getOrDefault(v, null)) != null) {
+          if (loop.contains(end)) {
+            System.err.println("Loop detected:"
+                + loop.stream().map(titles::get)
+                    .collect(Collectors.joining(",")));
+            // Return the smallest in the loop for consistency
+            return Collections.min(loop);
+          }
+          v = end;
+          loop.add(v);
         }
-        e.setValue(end);
+        return v;
       });
-      for(Integer target:redirects.keySet()){
-        if (redirects.containsKey(target)){
+      for (Integer target : redirects.keySet()) {
+        if (redirects.containsKey(target)) {
           String nonflat = ids.inverse().get(target);
           System.out.println(nonflat);
         }
