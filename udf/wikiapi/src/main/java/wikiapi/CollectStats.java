@@ -12,6 +12,8 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
+
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Maps;
@@ -74,7 +76,7 @@ public class CollectStats {
           redirects.put(id, redirectId);
         } else {
           // Subsection links are actively ignored
-        if (!redirect.contains("#")) {
+        if (StringUtils.containsNone(redirect, '#', ':')) {
           System.err.println("[[" + redirect + "]] has no id");
         }
       }
