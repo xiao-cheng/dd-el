@@ -57,7 +57,7 @@ public class CollectStats {
 
     String sql = "select id, "
         + "substring(mediawiki from '\\[\\[([^\\]]+)\\]\\]') "
-        + "from wiki_pages where html is null and lower(mediawiki) "
+        + "from wiki_pages where html is null and lower(mediawiki) "  
         + "like '#redirect%'";
 
     Map<Integer, Integer> redirects = Maps.newHashMap();
@@ -83,14 +83,24 @@ public class CollectStats {
       long start = System.currentTimeMillis();
       BiMap<String, Integer> ids = getIdCache(c);
       Map<Integer, Integer> redirects = getRedirects(c, ids);
-      for(int target:redirects.values()){
+      // flatten redirects
+      redirects.entrySet().stream().forEach(e->{
+        Integer end = e.getValue();
+        Integer deeper = null;
+        while((deeper = redirects.getOrDefault(end, null)) !=null ){
+          end = deeper;
+        }
+        e.setValue(end);
+      });
+      for(Integer target:redirects.keySet()){
         if (redirects.containsKey(target)){
           String nonflat = ids.inverse().get(target);
           System.out.println(nonflat);
         }
       }
       System.out.println(ids.size());
-      System.out.println((System.currentTimeMillis() - start) / 1000 + " seconds");
+      long elpased = (System.currentTimeMillis() - start);
+      System.out.println(elpased / 1000 + " seconds");
     } catch (SQLException e) {
       e.printStackTrace();
       System.exit(0);
