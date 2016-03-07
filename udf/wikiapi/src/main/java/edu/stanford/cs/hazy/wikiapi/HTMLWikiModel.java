@@ -5,6 +5,8 @@ import info.bliki.wiki.model.WikiModel;
 
 import java.io.IOException;
 
+import org.apache.commons.lang3.StringUtils;
+
 /**
  * Removed the default that enables template parsing
  * 
@@ -17,6 +19,10 @@ public class HTMLWikiModel extends WikiModel {
 
   public HTMLWikiModel() {
     super("${image}", "${title}");
+  }
+  
+  public static String normalizeTitle(String title){
+    return StringUtils.capitalize(title).replace('_', ' ');
   }
 
   @Override

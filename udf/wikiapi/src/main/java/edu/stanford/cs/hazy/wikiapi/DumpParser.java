@@ -46,7 +46,7 @@ public class DumpParser implements IArticleFilter {
   private boolean printProgress = true;
   
   // More threads than this would not help
-  private static final int MAX_THREADS = 40;
+  private static final int MAX_THREADS = 80;
 
   /**
    * Multi-threaded parsing with single dump I/O
@@ -86,6 +86,7 @@ public class DumpParser implements IArticleFilter {
         String mediawiki = page.getText();
         try {
           String html = model.render(mediawiki);
+          // Prints 4 column rows
           String output = Arrays.asList(id, title, html, mediawiki)
               .stream()
               .map(StringEscapeUtils::escapeCsv)
