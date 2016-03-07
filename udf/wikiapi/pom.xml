@@ -69,9 +69,6 @@
 						</goals>
 					</execution>
 				</executions>
-				<configuration>
-					<mainClass>edu.stanford.cs.hazy.wikiapi.DumpParser</mainClass>
-				</configuration>
 			</plugin>
 		</plugins>
 	</build>
