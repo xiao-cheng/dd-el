@@ -2,11 +2,17 @@
 
 wiki_pages(
   // Wikipedia internal article id
-  id              text,
+  id        text,
   // article title
-  title           text,
+  title     text,
   // html content of the article
-  html            text,
+  html      text,
   // raw mediawiki markup of the page
-  mediawiki       text
+  mediawiki text
 ).
+
+link(
+  @key doc_id   int,
+  @key start    int,
+  end           int
+)

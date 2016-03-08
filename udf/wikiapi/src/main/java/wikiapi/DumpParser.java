@@ -85,6 +85,7 @@ public class DumpParser implements IArticleFilter {
         String title = page.getTitle();
         String mediawiki = page.getText();
         try {
+          model.setUp();
           String html = model.render(mediawiki);
           // Prints 4 column rows
           String output = Arrays.asList(id, title, html, mediawiki)

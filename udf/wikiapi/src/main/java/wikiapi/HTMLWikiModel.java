@@ -21,10 +21,6 @@ public class HTMLWikiModel extends WikiModel {
     super("${image}", "${title}");
   }
   
-  public static String normalizeTitle(String title){
-    return StringUtils.capitalize(title.trim()).replace('_', ' ');
-  }
-
   @Override
   public String render(ITextConverter converter, String rawWikiText,
       boolean templateTopic) throws IOException {
@@ -38,6 +34,15 @@ public class HTMLWikiModel extends WikiModel {
     render(converter, rawWikiText, buf, templateTopic, PARSE_TEMPLATES);
 
     return buf.toString();
+  }
+  
+  /**
+   * Cleans up the Wikipedia title string
+   * @param title
+   * @return
+   */
+  public static String normalizeTitle(String title){
+    return StringUtils.capitalize(title.trim()).replace('_', ' ');
   }
 
 }

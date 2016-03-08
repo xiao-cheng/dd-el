@@ -27,6 +27,7 @@ import com.google.common.collect.Sets;
  *
  */
 public class CollectStats {
+  
   private static final boolean debug = false;
 
   private static void query(Connection c, String sql, Consumer<ResultSet> rs) {
@@ -108,27 +109,24 @@ public class CollectStats {
             }).collect(Collectors.toMap(Entry::getKey, Entry::getValue));
   }
 
+  private static void getLinks(){
+    
+  }
+  
   public static void main(String[] args) {
     try (Connection c = DB.getConnection()) {
       long start = System.currentTimeMillis();
       BiMap<String, Integer> ids = getIds(c);
       Map<Integer, String> titles = ids.inverse();
       Map<Integer, Integer> redirects = getRedirects(c, ids);
-
-      for (Integer rid : redirects.values()) {
-        if (redirects.containsKey(rid)) {
-          String nonflat = titles.get(rid);
-          System.out.println("Hierarchical redirect for: " + nonflat);
-        }
-      }
-      System.out.println(ids.size());
+      
+      
+      System.out.println("Article ids size "+ids.size());
       long elpased = (System.currentTimeMillis() - start);
       System.out.println(elpased / 1000 + " seconds");
     } catch (SQLException e) {
       e.printStackTrace();
       System.exit(0);
     }
-    System.out.println("Success");
   }
-
 }
