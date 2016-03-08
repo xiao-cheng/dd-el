@@ -33,7 +33,7 @@ public class Utils {
     if (Character.isLowerCase(str.codePointAt(0)))
       str = str.substring(0, 1).toUpperCase()
           + (str.length() > 1 ? str.substring(1) : "");
-    return StringUtils.replaceChars(str, ' ', '_');
+    return StringUtils.replaceChars(str, '_', ' ');
   }
 
   /**

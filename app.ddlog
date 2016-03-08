@@ -2,17 +2,27 @@
 
 wiki_pages(
   // Wikipedia internal article id
-  id        text,
+  @key  page_id   bigint,
   // article title
-  title     text,
-  // html content of the article
-  html      text,
-  // raw mediawiki markup of the page
-  mediawiki text
+  title           text,
+  // plain text content of the article
+  content         text,
+  // List of wikipedia categories delimited by vertical bar |
+  categories      text
 ).
 
-link(
-  @key doc_id   int,
+// Hyperlinks indexed by character offset
+links(
+  @key page_id   bigint,
   @key start    int,
-  end           int
-)
+  end           int,
+  surface      text,
+  target       text
+).
+
+// Redirect pages for normalizing links
+redirects(
+  @key page_id bigint,
+  title text,
+  target text
+).
