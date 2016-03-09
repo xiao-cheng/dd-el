@@ -124,9 +124,9 @@ public abstract class WikiDumpParser implements IArticleFilter, AutoCloseable {
     }
     if (page.isMain() && !StringUtils.isEmpty(page.getText())
         && !Utils.isSpecialTitle(page.getTitle())) {
-      WikiModel wikiModel = new PlainTextWikiModel(siteinfo, filter);
       // Concurrent callback
       parsing.execute(() -> {
+    	WikiModel wikiModel = new PlainTextWikiModel(siteinfo, filter);
         wikiModel.setUp();
         final List<Href> links = new ArrayList<Href>();
         LinkAnnotationConverter renderer = new LinkAnnotationConverter() {

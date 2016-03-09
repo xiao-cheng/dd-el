@@ -3,6 +3,7 @@ package wikiapi.processors;
 import info.bliki.wiki.dump.WikiArticle;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -22,9 +23,9 @@ import wikiapi.Utils;
  */
 public class PageMeta {
     
-    private String wikiText = null;
-    private List<String> pageCats = null;
-    private List<String> pageLinks = null;
+    private String wikiText = "";
+    private List<String> pageCats = Collections.emptyList();
+    private List<String> pageLinks = Collections.emptyList();
     private String redirectString = null;
     private Boolean redirect = null;
     private boolean stub = false;
@@ -58,6 +59,7 @@ public class PageMeta {
             return;
         wikiText = article.getText();
         if (wikiText == null) {
+        	wikiText = "";
             redirect = false;
             return;
         }
@@ -69,7 +71,6 @@ public class PageMeta {
         stub = STUB_PATTERN.matcher(wikiText).find();
         
         disambiguation = article.getTitle().endsWith("(disambiguation)") 
-//                || wikiText.trim().endsWith("{{disambig}}")
                 || DISAMB_TEMPLATE_PATTERN.matcher(wikiText).find();
     }
 
@@ -117,6 +118,8 @@ public class PageMeta {
 
     private void parseCategories() {
         pageCats = new ArrayList<String>();
+		if (StringUtils.isEmpty(wikiText))
+			return;
         Matcher matcher = CATEGORY_PATTERN.matcher(wikiText);
         while (matcher.find()) {
             String[] temp = StringUtils.split(matcher.group(1),'|');
@@ -127,7 +130,6 @@ public class PageMeta {
 
     private void parseLinks() {
         pageLinks = new ArrayList<String>();
-
         Matcher matcher = LINKS_PATTERN.matcher(wikiText);
         while (matcher.find()) {
             String[] temp = StringUtils.split(matcher.group(1),'|');
