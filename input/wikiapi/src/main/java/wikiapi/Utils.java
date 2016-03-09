@@ -45,8 +45,7 @@ public class Utils {
    */
   public static ThreadPoolExecutor getBoundedThreadPool() {
     int coreCount = Runtime.getRuntime().availableProcessors();
-    coreCount = Math.max(coreCount, 80);
-    ThreadPoolExecutor executor = new ThreadPoolExecutor(coreCount / 2 + 1, // Core
+    ThreadPoolExecutor executor = new ThreadPoolExecutor(coreCount, // Core
         coreCount, // Pool Max
         60, TimeUnit.SECONDS, // Thread keep alive time
         new ArrayBlockingQueue<Runnable>(coreCount),// Queue

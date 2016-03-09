@@ -85,11 +85,13 @@ public class CSVDumper {
             synchronizedWrite(pageWriter, pageStr);
 
             // Write links
-            String linkStr = links.stream()
-            .map(h -> csvLine(id, h.start, h.end, h.getSurface(text), h.normalizedLink()))
-            .collect(Collectors.joining());
-            
-            synchronizedWrite(linkWriter, linkStr);
+            if (!links.isEmpty()){
+              String linkStr = links.stream()
+              .map(h -> csvLine(id, h.start, h.end, h.getSurface(text), h.normalizedLink()))
+              .collect(Collectors.joining());
+              
+              synchronizedWrite(linkWriter, linkStr);
+            }
             
             // Write redirects
             String redirectStr = csvLine(id, title, meta.getRedirectedTitle());
