@@ -1,6 +1,6 @@
 @document
 
-wiki_pages(
+pages(
   // Wikipedia internal article id
   @key  page_id   bigint,
   // article title
