@@ -65,7 +65,7 @@ public class CSVDumper {
     Path p = Paths.get(args.length > 0 ? args[0] : System
         .getProperty("user.dir"));
     
-    
+    System.err.println("Saving CSV files to " + p);
     try (Writer pageWriter = getWriter(p, "pages.csv");
         Writer linkWriter = getWriter(p, "links.csv");
         Writer redirectWriter = getWriter(p, "redirects.csv");
@@ -94,8 +94,9 @@ public class CSVDumper {
             }
             
             // Write redirects
-            String redirectStr = csvLine(id, title, meta.getRedirectedTitle());
-            if (redirectStr != null) {
+            String redirectTarget = meta.getRedirectedTitle();
+            if (redirectTarget != null) {
+              String redirectStr = csvLine(id, title, meta.getRedirectedTitle());
               synchronizedWrite(redirectWriter, redirectStr);
             }
             
