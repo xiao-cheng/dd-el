@@ -1,4 +1,4 @@
-XML_DUMP=/dfs/scratch0/xiao/enwiki-20160204-pages-articles.xml.bz2i
+XML_DUMP=/dfs/scratch0/xiao/enwiki-20160204-pages-articles.xml.bz2
 if [[ "$(uname)" == 'Darwin' ]]; then
   XML_DUMP=~/Downloads/enwiki-sample-pages-articles.xml.bz2
 fi
