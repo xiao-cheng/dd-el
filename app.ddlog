@@ -2,6 +2,7 @@
 
 pages(
   // Wikipedia internal article id
+  @distributed_by
   @key  page_id   bigint,
   // article title
   title           text,
@@ -13,16 +14,21 @@ pages(
 
 // Hyperlinks indexed by character offset
 links(
+  @distributed_by
   @key page_id   bigint,
-  @key start    int,
-  end           int,
-  surface      text,
-  target       text
+  char_start     int,
+  char_end       int,
+  surface        text,
+  target         text
 ).
 
 // Redirect pages for normalizing links
 redirects(
+  @distributed_by
   @key page_id bigint,
   title text,
   target text
 ).
+
+normalized_links(page_id, char_start, char_end, surface, target) :- 
+  links(page_id, char_start, char_end, surface, target) 

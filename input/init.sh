@@ -6,7 +6,13 @@ fi
 if [[ -d input ]]; then
   mkdir -p input/data
 fi
-bzcat $XML_DUMP | mvn -q -f input/wikiapi/pom.xml compile exec:java -Dexec.args="input/data"
+
+if [[ ! -f input/data/pages.csv ]]; then
+  bzcat $XML_DUMP | mvn -q -f input/wikiapi/pom.xml compile exec:java -Dexec.args="input/data"
+  # Prevent potential modification to the files
+  chmod 444 input/data/*.csv
+fi
+
 #cat input/pages.csv | deepdive sql "COPY wiki_pages from STDIN DELIMITER ',' CSV"
 #cat input/redirects.csv | deepdive sql "COPY redirects from STDIN DELIMITER ',' CSV"
 #cat input/links.csv | deepdive sql "COPY links from STDIN DELIMITER ',' CSV"
