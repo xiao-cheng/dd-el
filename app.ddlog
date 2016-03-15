@@ -19,7 +19,7 @@ links(
   char_start     int,
   char_end       int,
   surface        text,
-  target         text
+  title          text
 ).
 
 // Redirect pages for normalizing links
@@ -30,5 +30,10 @@ redirects(
   target text
 ).
 
-normalized_links(page_id, char_start, char_end, surface, target) :- 
-  links(page_id, char_start, char_end, surface, target) 
+normalized_links(page_id, char_start, char_end, surface, COALESCE(target, title)) :- 
+  links(page_id, char_start, char_end, surface, title),
+  OPTIONAL[redirects(_, title, target)].
+
+  
+link_counts(surface, title, COUNT(surface)):- 
+  normalized_links(_, _, _, surface, title). 
