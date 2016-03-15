@@ -1,3 +1,3 @@
 # Entity Linking
 ## Dependencies
-mvn, bzcat, Java 8, wikipedia XML dump
+DeepDive, mvn, bzcat, Java 8, wikipedia XML dump
