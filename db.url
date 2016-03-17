@@ -1,1 +1,1 @@
-postgresql://localhost:$PGPORT/entitylinking
+greenplum://localhost:$PGPORT/entitylinking

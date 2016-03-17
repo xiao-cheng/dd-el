@@ -29,7 +29,7 @@ links(
   char_start     int,
   char_end       int,
   surface        text,
-  target         text
+  title          text
 ).
 
 // Redirect pages for normalizing links
@@ -40,5 +40,22 @@ redirects(
   target text
 ).
 
-normalized_links(page_id, char_start, char_end, surface, target) :- 
-  links(page_id, char_start, char_end, surface, target) 
+normalized_links(page_id, char_start, char_end, surface, COALESCE(target, title)) :- 
+  links(page_id, char_start, char_end, surface, title),
+  OPTIONAL[redirects(_, title, target)].
+
+// Surface-Title coocurrence counts that can be used for P(S|T) and P(T|S)  
+link_counts(surface, title, COUNT(surface)):- 
+  normalized_links(_, _, _, surface, title).
+
+// Full page data for UDF processing
+page_with_links(page_id, 
+                title, 
+                content, 
+                ARRAY_AGG(char_start), 
+                ARRAY_AGG(char_end), 
+                ARRAY_AGG(target)
+                ) :-
+  pages(page_id, title, content, categories),
+  normalized_links(page_id, char_start, char_end, surface, target).
+
