@@ -33,9 +33,9 @@ import wikiapi.processors.PlainTextWikiModel;
 public abstract class WikiDumpParser implements IArticleFilter, AutoCloseable {
 
   public static class Href {
-    final int start;
-    final int end;
-    final String link;
+    public final int start;
+    public final int end;
+    public final String link;
 
     public Href(String link, int start, int end) {
       super();
@@ -123,7 +123,7 @@ public abstract class WikiDumpParser implements IArticleFilter, AutoCloseable {
       prevTime = System.currentTimeMillis();
     }
     if (page.isMain() && !StringUtils.isEmpty(page.getText())
-        && !Utils.isSpecialTitle(page.getTitle())) {
+        && !Utils.isSpecialTitle(page.getTitle(),siteinfo)) {
       // Concurrent callback
       parsing.execute(() -> {
     	WikiModel wikiModel = new PlainTextWikiModel(siteinfo, filter);

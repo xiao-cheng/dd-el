@@ -1,5 +1,6 @@
 package wikiapi;
 
+import info.bliki.wiki.dump.Siteinfo;
 import info.bliki.wiki.dump.WikiArticle;
 
 import java.util.Arrays;
@@ -85,15 +86,16 @@ public class Utils {
           "MOS", "Media"));
 
   /**
-   * 
    * @param title
    * @return whether this page is a special page in Wikipedia
    */
-  public static boolean isSpecialTitle(String title) {
+  public static boolean isSpecialTitle(String title, Siteinfo siteinfo) {
     if (!StringUtils.isEmpty(title) && title.contains(":")) {
-      return prefixes.contains(StringUtils.substringBefore(title, ":"));
+      String namespace = StringUtils.substringBefore(title, ":");
+      return siteinfo.getIntegerNamespace(namespace) != null
+          || prefixes.contains(StringUtils.substringBefore(title, ":"));
     }
-    return false;
+ return false;
   }
 
   /**

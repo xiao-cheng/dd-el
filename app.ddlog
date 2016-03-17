@@ -7,9 +7,19 @@ pages(
   // article title
   title           text,
   // plain text content of the article
-  content         text,
+  plain           text,
+  // Whether this is a disambiguation page
+  disamb          bool,
+  // Redirect title, if exists
+  redirect        text,
+  
+  // Links
+  char_start      int[],
+  char_end        int[],
+  links           text[],
+  
   // List of wikipedia categories delimited by vertical bar |
-  categories      text
+  categories      text[],  
 ).
 
 // Hyperlinks indexed by character offset

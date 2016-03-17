@@ -5,6 +5,7 @@ import info.bliki.htmlcleaner.EndTagToken;
 import info.bliki.htmlcleaner.TagNode;
 import info.bliki.htmlcleaner.Utils;
 import info.bliki.wiki.filter.ITextConverter;
+import info.bliki.wiki.filter.WPList;
 import info.bliki.wiki.model.Configuration;
 import info.bliki.wiki.model.IWikiModel;
 import info.bliki.wiki.model.ImageFormat;
@@ -64,7 +65,7 @@ public abstract class LinkAnnotationConverter implements ITextConverter{
     }
     
     public LinkAnnotationConverter(boolean noLinks) {
-        this(noLinks,false);
+        this(noLinks, true);
     }
 
     public LinkAnnotationConverter() {
@@ -97,6 +98,10 @@ public abstract class LinkAnnotationConverter implements ITextConverter{
                             if("ref".equals(tagName)){
                                 continue;
                             }
+                            if(tag instanceof WPList){
+                              ((WPList)tag).renderPlainText(this, resultBuffer, model);
+                              continue;
+                            }
                             if("a".equals(tagName)){
                                 String link = tag.getAttributes().get("href");
                                 if (link != null){
@@ -114,13 +119,6 @@ public abstract class LinkAnnotationConverter implements ITextConverter{
                                         if(!blank(buffer,start, end)){
                                             hasLink(start, end, link);
                                         }
-                                        // Special templates are ignored
-//                                        else{
-//                                            StringBuilder sb = new StringBuilder();
-//                                            tag.renderHTML(this, sb, model);
-//                                            String s = sb.toString();
-//                                            System.out.println("Nothing rendered ?"+s);
-//                                        }
                                     }else{
                                         hasLink(start, end, link);
                                     }
@@ -128,6 +126,7 @@ public abstract class LinkAnnotationConverter implements ITextConverter{
                                     continue;
                                 }
                             }
+                            // For all other tags
                             tag.renderHTMLWithoutTag(this, resultBuffer, model);
                             
                         } else if (item instanceof TagNode) {
@@ -135,7 +134,7 @@ public abstract class LinkAnnotationConverter implements ITextConverter{
                             String tagName = node.getName();
                             if(!keepSectionTitle && "span".equals(tagName))
                                 continue;
-                            if("a".equals(tagName))
+                            if("a".equals(tagName) || "span".equals(tagName))
                                 resultBuffer.append(node.getBodyString());
                             else
                                 System.err.println("Node Type "+tagName+" is not handled.");
@@ -217,6 +216,37 @@ public abstract class LinkAnnotationConverter implements ITextConverter{
     public boolean noLinks() {
         return fNoLinks;
     }
+    
+//    public void renderList(WPList tag, Appendable buf, IWikiModel wikiModel) throws IOException {
+//      if (!tag.isEmpty()) {
+//        
+//        for (Object element:tag.getNestedElements())
+//          if (element instanceof InternalList) {
+//            InternalList subList = (InternalList) element;
+//            beginHTMLTag(buf, subList);
+//            renderSubListHTML(subList, converter, buf, wikiModel);
+//            // if (NEW_LINES) {
+//            // buf.append('\n');
+//            // }
+//            if (subList.fChar == UL_CHAR) {
+//              // bullet list
+//              buf.append("</ul>");
+//            } else if (subList.fChar == OL_CHAR) {
+//              // numbered list
+//              buf.append("</ol>");
+//            } else {
+//              // definition list
+//              buf.append("</dl>");
+//            }
+//          } else {
+//            TagStack stack = ((WPListElement) element).getTagStack();
+//            if (stack != null) {
+//              converter.nodesToText(stack.getNodeList(), buf, wikiModel);
+//            }
+//          }
+//        }
+//      }
+//    }
     
     public abstract void hasLink(int charStart, int charEnd, String link);
 
