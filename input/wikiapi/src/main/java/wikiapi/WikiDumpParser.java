@@ -6,6 +6,7 @@ import info.bliki.wiki.dump.WikiArticle;
 import info.bliki.wiki.dump.WikiXMLParser;
 import info.bliki.wiki.model.WikiModel;
 
+import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,7 +31,7 @@ import wikiapi.processors.PlainTextWikiModel;
  * @author cheng88
  *
  */
-public abstract class WikiDumpParser implements IArticleFilter, AutoCloseable {
+public abstract class WikiDumpParser implements IArticleFilter, Closeable {
 
   public static class Href {
     public final int start;
@@ -238,25 +239,26 @@ public abstract class WikiDumpParser implements IArticleFilter, AutoCloseable {
       System.exit(-1);
     }
 
-    try (WikiDumpParser parser = new WikiDumpParser() {
+    try{
+      WikiDumpParser parser = new WikiDumpParser() {
 
-      @Override
-      public void processAnnotation(WikiArticle page, PageMeta meta,
-          String text, List<Href> links) {
-        System.err.println("#TITLE--"+page.getTitle());
-        if(meta.isRedirect()){
-          System.err.println("#REDIRECT--"+meta.getRedirectedTitle());
-        }else{
-          System.err.println(StringUtils.abbreviate(text.trim(), 100));
-          System.err.println(StringUtils.abbreviate(links.toString(), 100));
-          links.stream().limit(2).forEach(h->{
-            System.err.println("#SURFACE--"+text.substring(h.start, h.end));
-          });
-          meta.getCategories().stream().limit(2).forEach(System.err::println);
+        @Override
+        public void processAnnotation(WikiArticle page, PageMeta meta,
+            String text, List<Href> links) {
+          System.err.println("#TITLE--"+page.getTitle());
+          if(meta.isRedirect()){
+            System.err.println("#REDIRECT--"+meta.getRedirectedTitle());
+          }else{
+            System.err.println(StringUtils.abbreviate(text.trim(), 100));
+            System.err.println(StringUtils.abbreviate(links.toString(), 100));
+            links.stream().limit(2).forEach(h->{
+              System.err.println("#SURFACE--"+text.substring(h.start, h.end));
+            });
+            meta.getCategories().stream().limit(2).forEach(System.err::println);
+          }
         }
-      }
 
-    }) {
+      };
       System.err.println("Started dump parsing");
       boolean debug = true;
       if (debug) {
@@ -264,6 +266,7 @@ public abstract class WikiDumpParser implements IArticleFilter, AutoCloseable {
         parser.parseDump(file);
       }
       parser.parseDump(System.in);
+      parser.close();
       System.err.println("\nParsing done! Totalling "
           + parser.getParsedPageCount() + " articles.");
     } catch (Exception e) {
