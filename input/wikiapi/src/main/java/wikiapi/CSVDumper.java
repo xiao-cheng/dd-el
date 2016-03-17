@@ -83,7 +83,7 @@ public class CSVDumper {
     };
     
     try {
-      WikiDumpParser parser = new WikiDumpParser(1) {
+      WikiDumpParser parser = new WikiDumpParser() {
         @Override
         public void processAnnotation(WikiArticle page, PageMeta meta,
             String plain, List<Href> links) {
