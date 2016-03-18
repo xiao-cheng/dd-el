@@ -1,12 +1,5 @@
 package wikiapi;
 
-import info.bliki.wiki.dump.IArticleFilter;
-import info.bliki.wiki.dump.Siteinfo;
-import info.bliki.wiki.dump.WikiArticle;
-import info.bliki.wiki.dump.WikiXMLParser;
-import info.bliki.wiki.model.WikiModel;
-
-import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -21,6 +14,11 @@ import java.util.function.Predicate;
 import org.apache.commons.lang3.StringUtils;
 import org.xml.sax.SAXException;
 
+import info.bliki.wiki.dump.IArticleFilter;
+import info.bliki.wiki.dump.Siteinfo;
+import info.bliki.wiki.dump.WikiArticle;
+import info.bliki.wiki.dump.WikiXMLParser;
+import info.bliki.wiki.model.WikiModel;
 import wikiapi.processors.LinkAnnotationConverter;
 import wikiapi.processors.PageMeta;
 import wikiapi.processors.PlainTextWikiModel;
@@ -31,7 +29,7 @@ import wikiapi.processors.PlainTextWikiModel;
  * @author cheng88
  *
  */
-public abstract class WikiDumpParser implements IArticleFilter, Closeable {
+public abstract class WikiDumpParser implements IArticleFilter {
 
   public static class Href {
     public final int start;
@@ -59,7 +57,7 @@ public abstract class WikiDumpParser implements IArticleFilter, Closeable {
       return "Href [start=" + start + ", end=" + end + ", link=" + link + "]";
     }
 
-    public Object normalizedLink() {
+    public String normalizedLink() {
       return Utils.str2wikilink(link);
     }
 
@@ -117,17 +115,13 @@ public abstract class WikiDumpParser implements IArticleFilter, Closeable {
     this.filter = filter;
     return this;
   }
+  
+  public Runnable createTask(WikiArticle page, Siteinfo siteinfo,int jobId) {
+    return () -> {
+      if (page.isMain() && !StringUtils.isEmpty(page.getText())
+          && !Utils.isSpecialTitle(page.getTitle(), siteinfo)) {
 
-  public void process(final WikiArticle page, Siteinfo siteinfo)
-      throws SAXException {
-    if (printProgress && totalParsed == 0) {
-      prevTime = System.currentTimeMillis();
-    }
-    if (page.isMain() && !StringUtils.isEmpty(page.getText())
-        && !Utils.isSpecialTitle(page.getTitle(),siteinfo)) {
-      // Concurrent callback
-      parsing.execute(() -> {
-    	WikiModel wikiModel = new PlainTextWikiModel(siteinfo, filter);
+        WikiModel wikiModel = new PlainTextWikiModel(siteinfo, filter);
         wikiModel.setUp();
         final List<Href> links = new ArrayList<Href>();
         LinkAnnotationConverter renderer = new LinkAnnotationConverter() {
@@ -137,25 +131,32 @@ public abstract class WikiDumpParser implements IArticleFilter, Closeable {
         };
         String text = wikiModel.render(renderer, page.getText());
         PageMeta meta = new PageMeta(page);
-        if (StringUtils.isEmpty(text)) {
-          processAnnotation(page, meta, "", NO_LINKS);
-        } else {
-          // Call back
-          processAnnotation(page, meta, text, links);
+        if (!StringUtils.isEmpty(text)) {
+          processAnnotation(page, meta, text, links, jobId);
+          return;
         }
-      });
-      if (printProgress && ++totalParsed % 500 == 0) {
-        double timeLapsed = (System.currentTimeMillis() - prevTime) / 1000.;
-        prevTime = System.currentTimeMillis();
-        double pagesPerSecond = (totalParsed - prevCount) / timeLapsed;
-        prevCount = totalParsed;
-        System.err
-            .printf("%d pages at %.2f/sec\n", totalParsed, pagesPerSecond);
-        System.err.printf("Active threads %d/%d\n", parsing.getActiveCount(),
-            parsing.getPoolSize());
       }
-    } else {
-      processAnnotation(page, new PageMeta(page), "", NO_LINKS);
+      processAnnotation(page, new PageMeta(page), "", NO_LINKS, jobId);
+    };
+  }
+
+  public void process(final WikiArticle page, Siteinfo siteinfo)
+      throws SAXException {
+    if (printProgress && totalParsed == 0) {
+      prevTime = System.currentTimeMillis();
+    }
+    // Concurrent callback
+    parsing.execute(createTask(page, siteinfo, totalParsed));
+    ++totalParsed;
+    if (printProgress && totalParsed % 1000 == 0) {
+      double timeLapsed = (System.currentTimeMillis() - prevTime) / 1000.;
+      prevTime = System.currentTimeMillis();
+      double pagesPerSecond = (totalParsed - prevCount) / timeLapsed;
+      prevCount = totalParsed;
+      System.err
+          .printf("%d pages at %.2f/sec\n", totalParsed, pagesPerSecond);
+      System.err.printf("Active threads %d/%d\n", parsing.getActiveCount(),
+          parsing.getPoolSize());
     }
   }
 
@@ -163,7 +164,7 @@ public abstract class WikiDumpParser implements IArticleFilter, Closeable {
    * Waits for all parsing jobs to finish If not called, there might be pages
    * still being parsed
    */
-  public void close() {
+  protected void close() {
     parsing.shutdown();
     try {
       parsing.awaitTermination(1, TimeUnit.DAYS);
@@ -181,9 +182,11 @@ public abstract class WikiDumpParser implements IArticleFilter, Closeable {
    * @param meta Including information on redirects, categories etc.
    * @param text Plain text rendering of the page
    * @param links Intrasite hyperlinks marked by character offsets
+   * @param jobId Guaranteed unique sequential id for the current processing 
+   * job.
    */
   public abstract void processAnnotation(WikiArticle page, PageMeta meta,
-      String text, List<Href> links);
+      String text, List<Href> links, int jobId);
 
   /**
    * @return the number of parsing jobs submitted to the parser
@@ -207,6 +210,7 @@ public abstract class WikiDumpParser implements IArticleFilter, Closeable {
       throws UnsupportedEncodingException, FileNotFoundException, IOException,
       SAXException {
     new WikiXMLParser(file, this).parse();
+    close();
   }
 
   /**
@@ -224,6 +228,7 @@ public abstract class WikiDumpParser implements IArticleFilter, Closeable {
       throws UnsupportedEncodingException, FileNotFoundException, IOException,
       SAXException {
     new WikiXMLParser(is, this).parse();
+    close();
   }
 
   /**
@@ -244,7 +249,7 @@ public abstract class WikiDumpParser implements IArticleFilter, Closeable {
 
         @Override
         public void processAnnotation(WikiArticle page, PageMeta meta,
-            String text, List<Href> links) {
+            String text, List<Href> links,int jobId) {
           System.err.println("#TITLE--"+page.getTitle());
           if(meta.isRedirect()){
             System.err.println("#REDIRECT--"+meta.getRedirectedTitle());
@@ -264,9 +269,8 @@ public abstract class WikiDumpParser implements IArticleFilter, Closeable {
       if (debug) {
         String file = "/Users/xiaocheng/Downloads/enwiki-sample-pages-articles.xml.bz2";
         parser.parseDump(file);
-      }
-      parser.parseDump(System.in);
-      parser.close();
+      }else
+        parser.parseDump(System.in);
       System.err.println("\nParsing done! Totalling "
           + parser.getParsedPageCount() + " articles.");
     } catch (Exception e) {

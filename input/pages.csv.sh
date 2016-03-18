@@ -1,2 +1,5 @@
-#!/bin/bash
-cat input/data/"$(basename "$0" | cut -d'.' -f 1)".csv
+if [ ! -f input/chunks/page0.csv ]; then
+  bash input/parse.sh
+fi
+cat input/chunks/page*.csv
+

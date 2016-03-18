@@ -7,19 +7,11 @@ pages(
   // article title
   title           text,
   // plain text content of the article
-  plain           text,
-  // Whether this is a disambiguation page
+  content         text,
+  // Whether this page is a disambiguation page
   disamb          bool,
-  // Redirect title, if exists
-  redirect        text,
-  
-  // Links
-  char_start      int[],
-  char_end        int[],
-  links           text[],
-  
-  // List of wikipedia categories delimited by vertical bar |
-  categories      text[],  
+  // List of wikipedia categories 
+  categories      text[]
 ).
 
 // Hyperlinks indexed by character offset
@@ -34,28 +26,27 @@ links(
 
 // Redirect pages for normalizing links
 redirects(
-  @distributed_by
-  @key page_id bigint,
   title text,
+  @distributed_by
   target text
 ).
 
-normalized_links(page_id, char_start, char_end, surface, COALESCE(target, title)) :- 
+normalized_links(page_id, char_start, char_end, surface, 
+    COALESCE(target, title),
+    COALESCE(link_id, -1)) :- 
   links(page_id, char_start, char_end, surface, title),
-  OPTIONAL[redirects(_, title, target)].
-
-// Surface-Title coocurrence counts that can be used for P(S|T) and P(T|S)  
+  OPTIONAL[redirects(title, target)],
+  OPTIONAL[pages(link_id, title, _, _, _)].
+  
 link_counts(surface, title, COUNT(surface)):- 
-  normalized_links(_, _, _, surface, title).
+  normalized_links(_, _, _, surface, title). 
 
-// Full page data for UDF processing
-page_with_links(page_id, 
-                title, 
-                content, 
-                ARRAY_AGG(char_start), 
-                ARRAY_AGG(char_end), 
-                ARRAY_AGG(target)
-                ) :-
-  pages(page_id, title, content, categories),
-  normalized_links(page_id, char_start, char_end, surface, target).
-
+aggregate_pages(page_id, title, content, disamb, categories,
+    ARRAY_AGG(char_start),
+    ARRAY_AGG(char_end),
+    ARRAY_AGG(link),
+    ARRAY_AGG(link_id)
+    ):-
+  pages(page_id, title, content, disamb, categories),
+  normalized_links(page_id, char_start, char_end, surface, link, link_id).
+  

@@ -1,22 +1,18 @@
 package wikiapi;
 
-import info.bliki.wiki.dump.WikiArticle;
-
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringEscapeUtils;
 
-import com.google.common.collect.Lists;
-
+import info.bliki.wiki.dump.WikiArticle;
 import wikiapi.WikiDumpParser.Href;
 import wikiapi.processors.PageMeta;
 
@@ -37,93 +33,106 @@ public class CSVDumper {
     return Arrays.stream(fields)
         .map(String::valueOf)
         .map(StringEscapeUtils::escapeCsv)
-        .collect(Collectors.joining(","));
+        .collect(Collectors.joining(",")) + "\n";
   }
   
-  private static <T> String csvArr(Stream<T> st) {
-    return st.map(String::valueOf)
-        .map(StringEscapeUtils::escapeCsv)
+  private static String csvIntArr(IntStream st) {
+    return st.mapToObj(String::valueOf)
+        .collect(Collectors.joining(",", "\"{", "}\""));
+  }
+  
+  private static String csvStrArr(Stream<String> st) {
+    String escaped = st.map(s->"\""+s.replace("\\","\\\\").replace("\"", "\\\"")+"\"")
         .collect(Collectors.joining(",", "{", "}"));
+    return escaped;
   }
   
-  private static String linkStr(List<Href> links){
-    return csvArr(links.stream().map(l->l.start)) + ","
-        +csvArr(links.stream().map(l->l.end)) + ","
-        +csvArr(links.stream().map(l->l.link));
+  private static List<FileWriter> chunkedWriters(String filenameFormat, int chunks){
+    return IntStream.range(0, chunks)
+    .boxed()
+    .map(i-> {
+      try {
+        return new FileWriter(String.format(filenameFormat, i));
+      } catch (Exception e) {
+        e.printStackTrace();
+        System.exit(0);
+      }
+      return null;
+      })
+    .collect(Collectors.toList());
   }
   
-  private static class Page{
-    String pageStr;//CSV line of fixed content
-    List<Href> links;
-    public Page(String pageStr, List<Href> links) {
-      super();
-      this.pageStr = pageStr;
-      this.links = links;
+  private static void write(List<FileWriter> writers,int jobId,String output){
+    FileWriter writer = writers.get(jobId%writers.size());
+    try {
+      synchronized(writer){
+        writer.write(output);
+      }
+    } catch (IOException e) {
+      e.printStackTrace();
     }
-    
   }
-
+  
+  private static void closeWriters(List<FileWriter> writers) throws IOException{
+    for(FileWriter w:writers){
+      w.close();
+    }
+  }
+  
+  private static String linkCsv(String id, String text, Href h){
+    return csvLine(id, h.start, h.end, h.getSurface(text), h.normalizedLink());
+  }
+  
   public static void main(String[] args) {
-    
     // Path to the output folder
     new File("chunks/").mkdirs();
-    AtomicInteger writerCount = new AtomicInteger();
-    List<FileWriter> writers = Collections.synchronizedList(Lists.newArrayList());
+    int chunks = 10;
     
-    ThreadLocal<FileWriter> writerPool = new ThreadLocal<FileWriter>(){
-      public FileWriter initValue(){
-        FileWriter writer = null;
-        try {
-          writer = new FileWriter("chunks/"+writerCount.incrementAndGet()+".csv");
-        } catch (IOException e) {
-          e.printStackTrace();
-        }
-        return writer;
-      }
-    };
+    List<FileWriter> pageWriters = chunkedWriters("chunks/page%d.csv",chunks);
+    List<FileWriter> linkWriters = chunkedWriters("chunks/link%d.csv",chunks);
+    List<FileWriter> redirectWriters = chunkedWriters("chunks/redirect%d.csv",chunks);
     
     try {
       WikiDumpParser parser = new WikiDumpParser() {
         @Override
         public void processAnnotation(WikiArticle page, PageMeta meta,
-            String plain, List<Href> links) {
+            String plain, List<Href> links,int jobId) {
+          
+          String title = Utils.str2wikilink(page.getTitle());
+          // Write redirects
+          String redirectTarget = meta.getRedirectedTitle();
+          if (redirectTarget != null) {
+            String redirectStr = csvLine(title, meta.getRedirectedTitle());
+            write(redirectWriters,jobId,redirectStr);
+            return;
+          }
 
           // Fields to to join in CSV
           String id = page.getId();
-          String title = Utils.str2wikilink(page.getTitle());
           Boolean disamb = meta.isDisambiguationPage();
-          String redirectTarget = meta.getRedirectedTitle();
-          
           // Array strings
-          String linkArrayStr = linkStr(links);
-          String categoryStr = csvArr(meta.getCategories().stream());
+          String categoryStr = csvStrArr(meta.getCategories().stream());
           
           // Write page dumps
-          String pageStr = csvLine(
-              id, 
-              title, 
-              plain,
-              disamb,
-              redirectTarget)
-              + ',' + 
-              linkArrayStr
-              + ',' +
-              categoryStr + '\n';
-          try {
-            writerPool.get().write(pageStr);
-          } catch (IOException e) {
-            e.printStackTrace();
+          String pageStr = csvLine(id, title, plain, disamb, categoryStr);
+          write(pageWriters,jobId,pageStr);
+          
+          if (!links.isEmpty()){
+            String linkStr = links.stream()
+                .map(h -> linkCsv(id, plain, h))
+                .collect(Collectors.joining());
+            
+            write(linkWriters, jobId, linkStr);
           }
+          
         }
       };
       // Start the parsing process
       InputStream in = System.in;//CSVDumper.class.getResourceAsStream("test.xml");
       parser.parseDump(in);
-      parser.close();
-      for(FileWriter w:writers){
-        w.close();
-      }
-
+      closeWriters(pageWriters);
+      closeWriters(linkWriters);
+      closeWriters(redirectWriters);
     } catch (Exception e) {
       e.printStackTrace();
     }
