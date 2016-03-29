@@ -115,7 +115,7 @@ public class CSVDumper {
           
           // Write page dumps
           String pageStr = csvLine(id, title, plain, disamb, categoryStr);
-          write(pageWriters,jobId,pageStr);
+          write(pageWriters, jobId, pageStr);
           
           if (!links.isEmpty()){
             String linkStr = links.stream()

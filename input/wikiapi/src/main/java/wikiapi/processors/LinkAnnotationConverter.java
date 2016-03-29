@@ -116,7 +116,7 @@ public abstract class LinkAnnotationConverter implements ITextConverter{
                                         resultBuffer.append(renderSpecialTags(tag,link));
                                         end = buffer.length();
                                         // If fixed
-                                        if(!blank(buffer,start, end)){
+                                        if(!blank(buffer, start, end)){
                                             hasLink(start, end, link);
                                         }
                                     }else{
